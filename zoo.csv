@@ -5,7 +5,7 @@ elephant,1003,31
 tiger,1004,300
 tiger,1005,320
 tiger,1006,330
-tiger,1007,290
+tiger,1000,290
 tiger,1008,310
 zebra,1009,200
 zebra,1010,220
@@ -15,7 +15,7 @@ zebra,1013,220
 zebra,1014,100
 zebra,1015.,80
 lion,1016,420
-lion,31.�,600
+lion,31,600
 lion,1018,500
 lion,1019,390
 kangaroo,1020,410
