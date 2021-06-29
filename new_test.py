@@ -1,6 +1,15 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import time
+start_time = time.time()
 
-df = pd.read_csv('zoo.csv', delimiter=',')
+def main():
+    fig = plt.Figure(figsize=(50,100))
+    plt.plot()
+    plt.show()
 
-print(df.uniq_id[1])
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+if __name__ == "__main__":
+    main()

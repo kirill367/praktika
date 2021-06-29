@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import time
+start_time = time.time()
 
 def main():
-    pd.set_option("display.max_rows", 10000)
+    pd.set_option("display.max_rows", 24000)
     df = pd.read_csv('sensors_sample_data.csv', delimiter=';')
 
 # 9105 - 16.���  были подобные записи в стобце velocity, заменяем на нули
@@ -15,6 +16,7 @@ def main():
             if j == '�':
                 df.velocity[numOfSrtangeSign] = str(df.velocity[numOfSrtangeSign]).replace('�', '0')
                 lineswithstrangesign.append(numOfSrtangeSign)
+                break
         numOfSrtangeSign += 1
 
 
@@ -22,13 +24,14 @@ def main():
 
 # создаем новый датафрейм с столбцом плотности потока
     dens_df = pd.DataFrame({'intensity':df.intensity, 'velocity': df.velocity}).astype('float64')
-    dens_df['density'] = dens_df.intensity / dens_df.velocity
 
+#заменяем значения в тех строках где раньше были � на среднее значениевсего столбца и добавляем столбец плотности
     for i in lineswithstrangesign:
         dens_df.velocity[i] = int(dens_df['velocity'].mean())
 
-# аномалии
+    dens_df['density'] = dens_df.intensity / dens_df.velocity
 
+# аномалии
 # аномалия, когда машины были, но скорость зафиксирована 0
     counterOfIssues1 = 0
     numOfLine = 0
@@ -53,10 +56,17 @@ def main():
             lines_with_issues2.append(newnumOfLine)
         newnumOfLine += 1
 
+# создаем новый датафрейм с столбцом времени
+    VbyTdf = pd.DataFrame({'velocity': dens_df.velocity, 'time': df.range_end})
 
+    x = np.arange(dens_df.shape[0])
+    y = dens_df.density[:]
+    plt.plot(x,y)
+    plt.show()
     print("The amount of 1st type - issues (intensity != 0 and velocity == 0 ) is", counterOfIssues1, '. lines are', lines_with_issues1)
-    print("The amount of 2nd type - issues  (intensity == 0 and velocity != 0 ) is", counterOfIssues2, '. lines are', lines_with_issues2)
-    print(dens_df['velocity'].head(9106))
+    print("The amount of 2nd type - issues (intensity == 0 and velocity != 0 ) is", counterOfIssues2, '. lines are', lines_with_issues2)
+    print("--- %s seconds ---" % (time.time() - start_time))
+
 
 
 if __name__ == "__main__":
