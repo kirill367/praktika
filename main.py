@@ -4,13 +4,22 @@ import matplotlib.pyplot as plt
 import time
 start_time = time.time()
 
+
+def show_graphs(plot, X, Y, name, color):
+    plot.scatter(range(len(Y)), Y, c=color)
+    plot.set_title(name)
+    plot.set_xlim(0, len(Y) - 1)
+    plot.set_xticks(range(len(X)))
+    plot.set_xticklabels(X)
+
+
 def main():
     pd.set_option("display.max_rows", 24000)
     df = pd.read_csv('sensors_sample_data.csv', delimiter=';')
 
 # 9105 - 16.���  были подобные записи в стобце velocity, заменяем на нули
     numOfSrtangeSign = 0
-    lineswithstrangesign = []
+    lineswithstrangesign = []  # индексы строк с неопознанными знаками
     for i in df.velocity:
         for j in i:
             if j == '�':
@@ -19,24 +28,27 @@ def main():
                 break
         numOfSrtangeSign += 1
 
-
-    print( 'lines with �-signs are: ', lineswithstrangesign)
+    print('lines with �-signs are: ', lineswithstrangesign)
 
 # создаем новый датафрейм с столбцом плотности потока
     dens_df = pd.DataFrame({'intensity':df.intensity, 'velocity': df.velocity}).astype('float64')
 
-#заменяем значения в тех строках где раньше были � на среднее значениевсего столбца и добавляем столбец плотности
+# заменяем значения в тех строках где раньше были � на среднеезначение всего столбца
     for i in lineswithstrangesign:
         dens_df.velocity[i] = int(dens_df['velocity'].mean())
-
+# создание резервного датафрейма, не сортированного по времени (на всякий случай)
+    unsorted_dens_df = dens_df.copy()
+#  добавляем столбцы плотности и времени, сортируя по времени
     dens_df['density'] = dens_df.intensity / dens_df.velocity
+    dens_df['time'] = df.range_end
+    dens_df['time'] = pd.to_datetime(dens_df.time)
+    dens_df.sort_values(by=['time'], inplace=True, ascending=True)
 
-# аномалии
-# аномалия, когда машины были, но скорость зафиксирована 0
-    counterOfIssues1 = 0
+# аномалия 1, когда машины были, но скорость зафиксирована 0
+    counterOfIssues1 = 0  # счетчик аномалий такого типа
     numOfLine = 0
-    numNanLines = []
-    lines_with_issues1 = []
+    numNanLines = []  # индексы строк с NaN значением ( 0 / 0 )
+    lines_with_issues1 = []  # индексы строк с аномалией 1 (с значением inf, (1 / 0))
     for i in dens_df.density:
         if np.isnan(i):
            numNanLines.append(numOfLine)
@@ -46,9 +58,9 @@ def main():
            lines_with_issues1.append(numOfLine)
         numOfLine += 1
 
-# аномалия, когда машин не было, но скорость зафиксированная не равна 0
-    counterOfIssues2 = 0
-    lines_with_issues2 = []
+# аномалия 2, когда машин не было, но скорость зафиксированная не равна 0
+    counterOfIssues2 = 0  # счетчик аномалий такого типа
+    lines_with_issues2 = []  # индексы строк с аномалией 1 (с значением inf, (1 / 0))
     newnumOfLine = 0
     for j in dens_df.intensity:
         if int(dens_df.intensity[newnumOfLine]) == 0:
@@ -56,17 +68,21 @@ def main():
             lines_with_issues2.append(newnumOfLine)
         newnumOfLine += 1
 
-# создаем новый датафрейм с столбцом времени
-    VbyTdf = pd.DataFrame({'velocity': dens_df.velocity, 'time': df.range_end})
-
-    x = np.arange(dens_df.shape[0])
-    y = dens_df.density[:]
-    plt.plot(x,y)
-    plt.show()
     print("The amount of 1st type - issues (intensity != 0 and velocity == 0 ) is", counterOfIssues1, '. lines are', lines_with_issues1)
     print("The amount of 2nd type - issues (intensity == 0 and velocity != 0 ) is", counterOfIssues2, '. lines are', lines_with_issues2)
-    print("--- %s seconds ---" % (time.time() - start_time))
 
+# визуализация с помощью графиков плотности по времени и скорости по времени
+    time_list = list(dens_df.time[::500])
+    fig = plt.figure(figsize=(17, 8))
+    ax1 = plt.subplot(221)
+    ax2 = plt.subplot(222)
+    ax3 = plt.subplot(212)
+    show_graphs(ax1, time_list, list(dens_df.intensity[::500]), 'Intensity', 'b')
+    show_graphs(ax2, time_list, list(dens_df.velocity[::500]), 'Velocity', 'r')
+    show_graphs(ax3, time_list, list(dens_df.density[::500]), 'Density', 'g')
+    plt.show()
+
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
