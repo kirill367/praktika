@@ -15,6 +15,8 @@ def show_graphs(plot, x, y, name, color):
 
 def main():
     pd.set_option("display.max_rows", 24000)
+    pd.set_option('display.width', 5000)
+
     df = pd.read_csv('sensors_sample_data.csv', delimiter=';')
 
 # 9105 - 16.���  были подобные записи в стобце velocity, заменяем на нули
