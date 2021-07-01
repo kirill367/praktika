@@ -5,12 +5,12 @@ import time
 start_time = time.time()
 
 
-def show_graphs(plot, X, Y, name, color):
-    plot.scatter(range(len(Y)), Y, c=color)
+def show_graphs(plot, x, y, name, color):
+    plot.scatter(range(len(y)), y, c=color)
     plot.set_title(name)
-    plot.set_xlim(0, len(Y) - 1)
-    plot.set_xticks(range(len(X)))
-    plot.set_xticklabels(X)
+    plot.set_xlim(0, len(y) - 1)
+    plot.set_xticks(range(len(x)))
+    plot.set_xticklabels(x)
 
 
 def main():
@@ -18,26 +18,25 @@ def main():
     df = pd.read_csv('sensors_sample_data.csv', delimiter=';')
 
 # 9105 - 16.���  были подобные записи в стобце velocity, заменяем на нули
-    numOfSrtangeSign = 0
-    lineswithstrangesign = []  # индексы строк с неопознанными знаками
+    num_of_strange_sign = 0
+    lines_with_strange_sign = []  # индексы строк с неопознанными знаками
     for i in df.velocity:
         for j in i:
             if j == '�':
-                df.velocity[numOfSrtangeSign] = str(df.velocity[numOfSrtangeSign]).replace('�', '0')
-                lineswithstrangesign.append(numOfSrtangeSign)
+                df.velocity[num_of_strange_sign] = str(df.velocity[num_of_strange_sign]).replace('�', '0')
+                lines_with_strange_sign.append(num_of_strange_sign)
                 break
-        numOfSrtangeSign += 1
+        num_of_strange_sign += 1
 
-    print('lines with �-signs are: ', lineswithstrangesign)
 
 # создаем новый датафрейм с столбцом плотности потока
-    dens_df = pd.DataFrame({'intensity':df.intensity, 'velocity': df.velocity}).astype('float64')
+    dens_df = pd.DataFrame({'intensity': df.intensity, 'velocity': df.velocity}).astype('float64')
 
 # заменяем значения в тех строках где раньше были � на среднеезначение всего столбца
-    for i in lineswithstrangesign:
+    for i in lines_with_strange_sign:
         dens_df.velocity[i] = int(dens_df['velocity'].mean())
 # создание резервного датафрейма, не сортированного по времени (на всякий случай)
-    unsorted_dens_df = dens_df.copy()
+    # unsorted_dens_df = dens_df.copy()
 #  добавляем столбцы плотности и времени, сортируя по времени
     dens_df['density'] = dens_df.intensity / dens_df.velocity
     dens_df['time'] = df.range_end
@@ -45,42 +44,27 @@ def main():
     dens_df.sort_values(by=['time'], inplace=True, ascending=True)
 
 # аномалия 1, когда машины были, но скорость зафиксирована 0
-    counterOfIssues1 = 0  # счетчик аномалий такого типа
-    numOfLine = 0
-    numNanLines = []  # индексы строк с NaN значением ( 0 / 0 )
-    lines_with_issues1 = []  # индексы строк с аномалией 1 (с значением inf, (1 / 0))
-    for i in dens_df.density:
-        if np.isnan(i):
-           numNanLines.append(numOfLine)
-
-        elif np.isinf(i):
-           counterOfIssues1 += 1
-           lines_with_issues1.append(numOfLine)
-        numOfLine += 1
+    zero_velocity_rows = dens_df[(dens_df['velocity'] != 0) & (dens_df['intensity'] == 0)].index.tolist()
 
 # аномалия 2, когда машин не было, но скорость зафиксированная не равна 0
-    counterOfIssues2 = 0  # счетчик аномалий такого типа
-    lines_with_issues2 = []  # индексы строк с аномалией 1 (с значением inf, (1 / 0))
-    newnumOfLine = 0
-    for j in dens_df.intensity:
-        if int(dens_df.intensity[newnumOfLine]) == 0:
-            counterOfIssues2 += 1
-            lines_with_issues2.append(newnumOfLine)
-        newnumOfLine += 1
+    inf_rows = dens_df[dens_df['density'] == np.inf].index.tolist()
 
-    print("The amount of 1st type - issues (intensity != 0 and velocity == 0 ) is", counterOfIssues1, '. lines are', lines_with_issues1)
-    print("The amount of 2nd type - issues (intensity == 0 and velocity != 0 ) is", counterOfIssues2, '. lines are', lines_with_issues2)
+# просто так нашел индексы строк где не было ни машин ни скорости
+    nan_rows = dens_df[dens_df['density'].isnull()].index.tolist()
 
 # визуализация с помощью графиков плотности по времени и скорости по времени
-    time_list = list(dens_df.time[::500])
-    fig = plt.figure(figsize=(17, 8))
-    ax1 = plt.subplot(221)
-    ax2 = plt.subplot(222)
-    ax3 = plt.subplot(212)
-    show_graphs(ax1, time_list, list(dens_df.intensity[::500]), 'Intensity', 'b')
-    show_graphs(ax2, time_list, list(dens_df.velocity[::500]), 'Velocity', 'r')
-    show_graphs(ax3, time_list, list(dens_df.density[::500]), 'Density', 'g')
+    time_list = list(dens_df.time[::100])
+    plt.figure(figsize=(17, 8))
+    show_graphs(plt.subplot(221), time_list, list(dens_df.intensity[::100]), 'Intensity', 'b')
+    show_graphs(plt.subplot(222), time_list, list(dens_df.velocity[::100]), 'Velocity', 'r')
+    show_graphs(plt.subplot(212), time_list, list(dens_df.density[::100]), 'Density', 'g')
     plt.show()
+
+    print("Amount of 1st type issues (velocity is 0 while intensity is not 0):", len(zero_velocity_rows),
+          ". Indexes are:", zero_velocity_rows)
+    print("Amount of 2nd type issues (velocity is not 0 while intensity is 0), dividing by 0 = inf:", len(inf_rows),
+          ". Indexes are:", inf_rows)
+    print("Amount of NaN (0 velocity and 0 intensity):", len(nan_rows), ". Indexes are:", nan_rows)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
