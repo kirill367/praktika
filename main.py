@@ -3,7 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import time
 start_time = time.time()
-
+global flag
+flag = True
 
 def show_graphs(plot, x, y, name, color):
     plot.scatter(range(len(y)), y, c=color)
@@ -11,6 +12,23 @@ def show_graphs(plot, x, y, name, color):
     plot.set_xlim(0, len(y) - 1)
     plot.set_xticks(range(len(x)))
     plot.set_xticklabels(x)
+
+def hop_to_next_hour(func_df):
+    global starting_point, prev_hour, flag
+    if flag:
+        starting_point = 0
+        flag = False
+
+    hop = 0
+    prev_hour = func_df.time[starting_point]
+    for i in func_df.time[starting_point: ]:
+        if i.hour == prev_hour.hour:
+            hop += 1
+            prev_hour = i.hour
+        else:
+
+            return hop
+        starting_point += 1
 
 
 def main():
@@ -38,7 +56,7 @@ def main():
     for i in lines_with_strange_sign:
         dens_df.velocity[i] = int(dens_df['velocity'].mean())
 # создание резервного датафрейма, не сортированного по времени (на всякий случай)
-    #unsorted_dens_df = dens_df.copy()
+    # unsorted_dens_df = dens_df.copy()
 #  добавляем столбцы плотности и времени, сортируя по времени
     dens_df['density'] = dens_df.intensity / dens_df.velocity
 
@@ -64,14 +82,13 @@ def main():
     trending_df = dens_df.copy().reset_index(drop=True)
     to_another_hour = 100
     trending_df['next_value'] = trending_df['velocity'].shift(- to_another_hour)
-
 # визуализация с помощью графиков плотности по времени и скорости по времени
     time_list = list(dens_df.time[::100])
     plt.figure(figsize=(17, 8))
     show_graphs(plt.subplot(221), time_list, list(dens_df.intensity[::100]), 'Intensity', 'b')
     show_graphs(plt.subplot(222), time_list, list(dens_df.velocity[::100]), 'Velocity', 'r')
     show_graphs(plt.subplot(212), time_list, list(dens_df.density[::100]), 'Density', 'g')
-    #plt.show()
+    # plt.show()
 
     print("Amount of 1st type issues (velocity is 0 while intensity is not 0):", len(zero_velocity_rows),
           ". Indexes are:", zero_velocity_rows)
@@ -79,8 +96,11 @@ def main():
           ". Indexes are:", inf_rows)
     print("Amount of NaN (0 velocity and 0 intensity):", len(nan_rows), ". Indexes are:", nan_rows)
 
-
     print("--- %s seconds ---" % (time.time() - start_time))
+    print(trending_df.head(650))
+    print(hop_to_next_hour(trending_df))
+    print(hop_to_next_hour(trending_df))
+
 
 
 if __name__ == "__main__":
