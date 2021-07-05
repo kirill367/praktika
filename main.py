@@ -3,8 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import time
 start_time = time.time()
-global flag
-flag = True
+
 
 def show_graphs(plot, x, y, name, color):
     plot.scatter(range(len(y)), y, c=color)
@@ -13,22 +12,22 @@ def show_graphs(plot, x, y, name, color):
     plot.set_xticks(range(len(x)))
     plot.set_xticklabels(x)
 
-def hop_to_next_hour(func_df):
-    global starting_point, prev_hour, flag
-    if flag:
-        starting_point = 0
-        flag = False
+
+def hop_to_next_hour(func_df, starting_point):
 
     hop = 0
-    prev_hour = func_df.time[starting_point]
-    for i in func_df.time[starting_point: ]:
-        if i.hour == prev_hour.hour:
-            hop += 1
-            prev_hour = i.hour
+    prev_hour = func_df.time[starting_point].hour
+    for i in func_df.time[starting_point:]:
+        if i != func_df.time[len(func_df.time) - 1]:
+            if i.hour == prev_hour:
+                hop += 1
+                prev_hour = i.hour
+            else:
+                return hop, starting_point
         else:
-
-            return hop
+            return hop, starting_point
         starting_point += 1
+
 
 
 def main():
@@ -97,10 +96,21 @@ def main():
     print("Amount of NaN (0 velocity and 0 intensity):", len(nan_rows), ". Indexes are:", nan_rows)
 
     print("--- %s seconds ---" % (time.time() - start_time))
-    print(trending_df.head(650))
-    print(hop_to_next_hour(trending_df))
-    print(hop_to_next_hour(trending_df))
 
+
+    list_of_new_hours = [0]
+    new_hour = 0
+    for i in range(1000):
+        hop, new_hour = hop_to_next_hour(trending_df, new_hour)
+        list_of_new_hours.append(new_hour)
+        if hop == 0:
+            break
+
+    #df_by_hours = pd.DataFrame({'hour': list(map(int,(8 * str(*np.arange(24))))), 'new_hour': list(map(int,(8 * str(*np.arange(24)))))})
+    print(list_of_new_hours)
+    num1, num2 = list_of_new_hours[0], 0
+    for i in list_of_new_hours:
+        if num1 > num2:
 
 
 if __name__ == "__main__":
