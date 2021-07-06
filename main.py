@@ -13,6 +13,7 @@ def show_graphs(plot, x, y, name, color):
     plot.set_xticklabels(x)
 
 
+# нахождение индекса начала нового часа в отсортированном по времени датафрейме
 def hop_to_next_hour(func_df, starting_point):
 
     hop = 0
@@ -29,9 +30,9 @@ def hop_to_next_hour(func_df, starting_point):
         starting_point += 1
 
 
-
 def main():
-    pd.set_option("display.max_rows", 24000)
+    pd.set_option("display.max_rows", 44000)
+    pd.set_option("display.max_columns", 8)
     pd.set_option('display.width', 5000)
 
     df = pd.read_csv('sensors_sample_data.csv', delimiter=';')
@@ -54,10 +55,11 @@ def main():
 # заменяем значения в тех строках где раньше были � на среднеезначение всего столбца
     for i in lines_with_strange_sign:
         dens_df.velocity[i] = int(dens_df['velocity'].mean())
-# создание резервного датафрейма, не сортированного по времени (на всякий случай)
-    # unsorted_dens_df = dens_df.copy()
+
 #  добавляем столбцы плотности и времени, сортируя по времени
     dens_df['density'] = dens_df.intensity / dens_df.velocity
+# создание резервного датафрейма, не сортированного по времени (на всякий случай)
+    # unsorted_dens_df = dens_df.copy()
 
     dens_df['time'] = df.range_end
     dens_df['time'] = pd.to_datetime(dens_df.time)
@@ -73,15 +75,14 @@ def main():
 # просто так нашел индексы строк где не было ни машин ни скорости
     nan_rows = dens_df[dens_df['density'].isnull()].index.tolist()
 
-#
-    avarege_dens = dens_df.density.replace([-np.inf, np.inf, np.nan], 0).mean()
-    dens_df = dens_df.replace([-np.inf, np.inf, np.nan], [avarege_dens, avarege_dens, 0])
+# заменяем все значения inf и NaN на нули и затем на среднее значение столбца
+    average_dens = dens_df.density.replace([-np.inf, np.inf, np.nan], 0).mean()
+    dens_df = dens_df.replace([-np.inf, np.inf, np.nan], [average_dens, average_dens, 0])
 
-# создаемм датафрейм с трендами
-    trending_df = dens_df.copy().reset_index(drop=True)
-    to_another_hour = 100
-    trending_df['next_value'] = trending_df['velocity'].shift(- to_another_hour)
-# визуализация с помощью графиков плотности по времени и скорости по времени
+# создаемм датафрейм отсортированны  по времени но с новыми индексами с нуля, для нахождения далее индексов новых часов
+    df_by_hours = dens_df.copy().reset_index(drop=True)
+
+# визуализация с помощью графиков плотности, скорости и интенсивности по времени
     time_list = list(dens_df.time[::100])
     plt.figure(figsize=(17, 8))
     show_graphs(plt.subplot(221), time_list, list(dens_df.intensity[::100]), 'Intensity', 'b')
@@ -90,27 +91,41 @@ def main():
     # plt.show()
 
     print("Amount of 1st type issues (velocity is 0 while intensity is not 0):", len(zero_velocity_rows),
-          ". Indexes are:", zero_velocity_rows)
+          ". Indexes are:", *zero_velocity_rows)
     print("Amount of 2nd type issues (velocity is not 0 while intensity is 0), dividing by 0 = inf:", len(inf_rows),
-          ". Indexes are:", inf_rows)
-    print("Amount of NaN (0 velocity and 0 intensity):", len(nan_rows), ". Indexes are:", nan_rows)
+          ". Indexes are:", *inf_rows)
+    print("Amount of NaN (0 velocity and 0 intensity):", len(nan_rows), ". Indexes are:", *nan_rows)
 
-    print("--- %s seconds ---" % (time.time() - start_time))
-
-
+# анализ по каждому часу
     list_of_new_hours = [0]
     new_hour = 0
     for i in range(1000):
-        hop, new_hour = hop_to_next_hour(trending_df, new_hour)
-        list_of_new_hours.append(new_hour)
+        hop, new_hour = hop_to_next_hour(df_by_hours, new_hour)
         if hop == 0:
             break
+        list_of_new_hours.append(new_hour)
 
-    #df_by_hours = pd.DataFrame({'hour': list(map(int,(8 * str(*np.arange(24))))), 'new_hour': list(map(int,(8 * str(*np.arange(24)))))})
-    print(list_of_new_hours)
-    num1, num2 = list_of_new_hours[0], 0
-    for i in list_of_new_hours:
-        if num1 > num2:
+    trending_df = pd.DataFrame({'hour': list(np.arange(24)) *
+                                (len(list_of_new_hours) // 24) + list(np.arange(len(list_of_new_hours) % 24)),
+                                'intensity': df_by_hours.intensity.iloc[list_of_new_hours],
+                                'velocity': df_by_hours.velocity.iloc[list_of_new_hours],
+                                'density': df_by_hours.density.iloc[list_of_new_hours]})
+
+    trending_df['trend intensity'] = np.where(trending_df['intensity'] < trending_df['intensity'].shift(), 'DOWN',
+                                              np.where(trending_df['intensity'] > trending_df['intensity'].shift(),
+                                                       'UP', 'FLAT'))
+
+    trending_df['trend velocity'] = np.where(trending_df['velocity'] < trending_df['velocity'].shift(), 'DOWN',
+                                             np.where(trending_df['velocity'] > trending_df['velocity'].shift(),
+                                                      'UP', 'FLAT'))
+
+    trending_df['trend density'] = np.where(trending_df['density'] < trending_df['density'].shift(), 'DOWN',
+                                            np.where(trending_df['density'] > trending_df['density'].shift(),
+                                                     'UP', 'FLAT'))
+
+    print(trending_df)
+
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
