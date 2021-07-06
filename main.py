@@ -14,12 +14,12 @@ def show_graphs(plot, x, y, name, color):
 
 
 # нахождение индекса начала нового часа в отсортированном по времени датафрейме
-def hop_to_next_hour(func_df, starting_point):
+def hop_to_next_hour(func_df_series, starting_point):
 
     hop = 0
-    prev_hour = func_df.time[starting_point].hour
-    for i in func_df.time[starting_point:]:
-        if i != func_df.time[len(func_df.time) - 1]:
+    prev_hour = func_df_series[starting_point].hour
+    for i in func_df_series[starting_point:]:
+        if i != func_df_series[len(func_df_series) - 1]:
             if i.hour == prev_hour:
                 hop += 1
                 prev_hour = i.hour
@@ -100,7 +100,7 @@ def main():
     list_of_new_hours = [0]
     new_hour = 0
     for i in range(1000):
-        hop, new_hour = hop_to_next_hour(df_by_hours, new_hour)
+        hop, new_hour = hop_to_next_hour(df_by_hours.time, new_hour)
         if hop == 0:
             break
         list_of_new_hours.append(new_hour)
