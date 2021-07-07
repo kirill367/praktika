@@ -83,12 +83,12 @@ def main():
     df_by_hours = dens_df.copy().reset_index(drop=True)
 
 # визуализация с помощью графиков плотности, скорости и интенсивности по времени
-    time_list = list(dens_df.time[::100])
+    time_list = list(dens_df.time[::])
     plt.figure(figsize=(17, 8))
-    show_graphs(plt.subplot(221), time_list, list(dens_df.intensity[::100]), 'Intensity', 'b')
-    show_graphs(plt.subplot(222), time_list, list(dens_df.velocity[::100]), 'Velocity', 'r')
-    show_graphs(plt.subplot(212), time_list, list(dens_df.density[::100]), 'Density', 'g')
-    # plt.show()
+    show_graphs(plt.subplot(221), time_list, list(dens_df.intensity[::]), 'Intensity', 'b')
+    show_graphs(plt.subplot(222), time_list, list(dens_df.velocity[::]), 'Velocity', 'r')
+    show_graphs(plt.subplot(212), time_list, list(dens_df.density[::]), 'Density', 'g')
+    #plt.show()
 
     print("Amount of 1st type issues (velocity is 0 while intensity is not 0):", len(zero_velocity_rows),
           ". Indexes are:", *zero_velocity_rows)
@@ -123,7 +123,7 @@ def main():
                                             np.where(trending_df['density'] > trending_df['density'].shift(),
                                                      'UP', 'FLAT'))
 
-    print(trending_df)
+    #print(trending_df)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
